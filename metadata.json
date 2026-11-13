@@ -1,0 +1,6 @@
+{
+  "name": "IRONFORM - Elite Conditioning Gym Owerri",
+  "description": "Premier conditioning and athletic strength gym located in Owerri, Nigeria. High-intensity training, Olympic lifting, 24/7 power, and elite coaching.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
