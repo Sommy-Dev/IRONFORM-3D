@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
 import { StoreNavbar } from './components/StoreNavbar';
 import { StoreHero } from './components/StoreHero';
+import { SteelRack } from './components/SteelRack';
 import { HomeIntroStrip } from './components/HomeIntroStrip';
 import { HomeCategoryCards } from './components/HomeCategoryCards';
 import { HomeFeaturedProducts } from './components/HomeFeaturedProducts';
@@ -24,6 +25,7 @@ function HomePage() {
       <StoreNavbar />
       <main className="flex-1">
         <StoreHero />
+        <SteelRack />
         <HomeIntroStrip />
         <HomeCategoryCards />
         <HomeFeaturedProducts products={FEATURED} />
