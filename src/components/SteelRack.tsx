@@ -1,43 +1,33 @@
 import React, { useRef, useState, useEffect, Suspense } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { useGLTF } from '@react-three/drei/core/Gltf';
+import { useGLTF, Environment } from '@react-three/drei';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const CAPTIONS = ['Olympic plates', 'Precision-balanced bars', 'Built for years'];
 
-function Loading() {
-  return (
-    <div className="flex flex-col items-center justify-center text-slate-400 text-sm">
-      Loading 3D model…
-    </div>
-  );
-}
-
-function ModelFail() {
+function ModelFail({ error }: { error: string }) {
   return (
     <div className="flex flex-col items-center justify-center p-10 text-center text-slate-400">
       <p className="text-sm">3D model failed to load.</p>
-      <p className="text-xs mt-2 text-slate-500">
-        Check that /models/rack.glb exists.
-      </p>
+      <p className="text-xs mt-2 text-slate-500 break-words">{error}</p>
     </div>
   );
 }
 
 class ModelErrorBoundary extends React.Component<
   { children: React.ReactNode },
-  { hasError: boolean }
+  { hasError: boolean; error: string | null }
 > {
-  state = { hasError: false };
-  static getDerivedStateFromError(): { hasError: boolean } {
-    return { hasError: true };
+  state = { hasError: false, error: null };
+  static getDerivedStateFromError(error: Error): { hasError: boolean; error: string | null } {
+    return { hasError: true, error: error.message };
   }
   render() {
-    return this.state.hasError ? <ModelFail /> : this.props.children;
+    return this.state.hasError ? <ModelFail error={this.state.error ?? ''} /> : this.props.children;
   }
 }
 
@@ -55,12 +45,15 @@ function useIsMobile() {
 }
 
 interface RackSceneProps {
-  groupRef: React.RefObject<THREE.Group>;
-  cameraRef: React.RefObject<THREE.PerspectiveCamera>;
+  scrollProgress: React.MutableRefObject<number>;
 }
 
-const RackScene: React.FC<RackSceneProps> = ({ groupRef, cameraRef }) => {
+const RackScene: React.FC<RackSceneProps> = ({ scrollProgress }) => {
   const { camera } = useThree();
+  const cameraRef = useRef<THREE.PerspectiveCamera>(
+    camera as THREE.PerspectiveCamera,
+  );
+  const groupRef = useRef<THREE.Group>(null!);
 
   useEffect(() => {
     cameraRef.current = camera as THREE.PerspectiveCamera;
@@ -88,76 +81,116 @@ const RackScene: React.FC<RackSceneProps> = ({ groupRef, cameraRef }) => {
     );
     groupRef.current.scale.set(scale, scale, scale);
     groupRef.current.rotation.y = -0.45;
+
+    // Soften black plate materials so they show soft highlights
+    groupRef.current.traverse((child) => {
+      const mesh = child as THREE.Mesh;
+      if (mesh.isMesh && mesh.material) {
+        const mats = Array.isArray(mesh.material)
+          ? mesh.material
+          : [mesh.material];
+        mats.forEach((mat) => {
+          const standard = mat as THREE.MeshStandardMaterial;
+          const color = standard.color || new THREE.Color(0, 0, 0);
+          const luminance =
+            0.299 * color.r + 0.587 * color.g + 0.114 * color.b;
+          if (luminance < 0.25) {
+            standard.metalness = 0.6;
+            standard.roughness = 0.35;
+            standard.needsUpdate = true;
+          }
+        });
+      }
+    });
   }, [gltf.scene, groupRef]);
+
+  // Scroll-driven 3D animation inside Canvas via useFrame
+  useFrame(() => {
+    if (!groupRef.current || !cameraRef.current) return;
+    const p = Math.max(0, Math.min(1, scrollProgress.current));
+
+    let rotY: number, camX: number, camY: number, camZ: number;
+
+    if (p < 0.25) {
+      const t = p / 0.25;
+      rotY = -0.45 + Math.PI * 0.5 * t;
+      camX = 0;
+      camY = 1.4 + (1.8 - 1.4) * t;
+      camZ = 6 - (6 - 3.6) * t;
+    } else if (p < 0.5) {
+      const t = (p - 0.25) / 0.25;
+      rotY = Math.PI * 0.5 + Math.PI * 0.6 * t;
+      camX = 0 + 0.6 * t;
+      camY = 1.8 + (1.1 - 1.8) * t;
+      camZ = 3.6 + (2.6 - 3.6) * t;
+    } else if (p < 0.75) {
+      const t = (p - 0.5) / 0.25;
+      rotY = Math.PI * 1.1 + Math.PI * 0.9 * t;
+      camX = 0.6 + (2.4 - 0.6) * t;
+      camY = 1.1 + (1.6 - 1.1) * t;
+      camZ = 2.6 + (4.4 - 2.6) * t;
+    } else {
+      const t = (p - 0.75) / 0.25;
+      rotY = Math.PI * 2.0 + Math.PI * 0.5 * t;
+      camX = 2.4 - 2.4 * t;
+      camY = 1.6 + (1.8 - 1.6) * t;
+      camZ = 4.4 + (7.2 - 4.4) * t;
+    }
+
+    groupRef.current.rotation.y = rotY;
+    cameraRef.current.position.set(camX, camY, camZ);
+    cameraRef.current.lookAt(0, 0, 0);
+  });
 
   return <group ref={groupRef} dispose={null} />;
 };
 
 export const SteelRack: React.FC = () => {
   const isMobile = useIsMobile();
+  const [mounted, setMounted] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null!);
-  const groupRef = useRef<THREE.Group>(null!);
-  const cameraRef = useRef<THREE.PerspectiveCamera>(null!);
   const captionRefs = useRef<(HTMLHeadingElement | null)[]>(
     CAPTIONS.map(() => null),
   );
+  const scrollProgress = useRef(0);
 
+  // ScrollTrigger updates scrollProgress ref (no R3F hooks here)
   useEffect(() => {
-    if (!sectionRef.current || !groupRef.current || !cameraRef.current) return;
+    if (!sectionRef.current) return;
+    const trigger = ScrollTrigger.create({
+      trigger: sectionRef.current,
+      start: 'top bottom',
+      end: 'bottom top',
+      onUpdate: (self) => {
+        scrollProgress.current = self.progress;
+      },
+    });
+    return () => trigger.kill();
+  }, []);
 
+  // Only mount the Canvas when the section is near the viewport
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) setMounted(true);
+      },
+      { threshold: 0, rootMargin: '200px' },
+    );
+    const el = sectionRef.current;
+    if (el) observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Caption animations driven by the same scroll progress (DOM, not Canvas)
+  useEffect(() => {
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: sectionRef.current,
-        start: 'top top',
-        end: 'bottom bottom',
+        start: 'top bottom',
+        end: 'bottom top',
         scrub: 1,
-        anticipatePin: 1,
-        invalidateOnRefresh: true,
       },
     });
-
-    // Phase 1: slow turn + ease in
-    tl.to(groupRef.current.rotation, { y: Math.PI * 0.5, ease: 'none' }, 0);
-    tl.to(
-      cameraRef.current.position,
-      { x: 0, y: 1.4, z: 3.6, ease: 'none' },
-      0.1,
-    );
-    // Phase 2: zoom toward the plates
-    tl.to(
-      groupRef.current.rotation,
-      { y: Math.PI * 1.1, ease: 'none' },
-      0.3,
-    );
-    tl.to(
-      cameraRef.current.position,
-      { x: 0.6, y: 1.1, z: 2.6, ease: 'none' },
-      0.4,
-    );
-    // Phase 3: orbit around the rack
-    tl.to(
-      groupRef.current.rotation,
-      { y: Math.PI * 2.0, ease: 'none' },
-      0.6,
-    );
-    tl.to(
-      cameraRef.current.position,
-      { x: 2.4, y: 1.6, z: 4.4, ease: 'none' },
-      0.65,
-    );
-    // Phase 4: pull back
-    tl.to(
-      cameraRef.current.position,
-      { x: 0, y: 1.8, z: 7.2, ease: 'none' },
-      0.85,
-    );
-    tl.to(
-      groupRef.current.rotation,
-      { y: Math.PI * 2.5, ease: 'none' },
-      0.85,
-    );
-
-    // Captions fade in/out at 3 scroll points
     tl.fromTo(
       captionRefs.current[0],
       { opacity: 0, y: 14 },
@@ -178,25 +211,23 @@ export const SteelRack: React.FC = () => {
       { opacity: 1, y: 0, ease: 'none' },
       0.60,
     );
-
     return () => {
       tl.scrollTrigger?.kill();
       tl.kill();
     };
-  }, [sectionRef, groupRef, cameraRef, captionRefs]);
+  }, [sectionRef, captionRefs]);
 
-  return (
-    <section ref={sectionRef} className="relative w-full bg-[#0B0F14] text-[#E0E2EA]" style={{ height: '200vh' }}>
-      {/* Pinned 3D canvas */}
-      <div
-        className={`sticky top-0 z-0 w-full overflow-hidden ${
-          isMobile ? 'h-[48vh] mt-16 mb-24 mx-auto' : 'h-screen'
-        }`}
-      >
+  const canvasContent = mounted ? (
+    <div
+      className={`sticky top-0 z-0 w-full overflow-hidden ${
+        isMobile ? 'h-[48vh] mt-16 mb-24 mx-auto' : 'h-screen'
+      }`}
+    >
+      <ModelErrorBoundary>
         <Canvas
           key={isMobile ? 'mobile' : 'desktop'}
           camera={{ position: [0, 2, 6], fov: 45 }}
-          dpr={isMobile ? 1 : 2}
+          dpr={[1, 1.5]}
           style={{
             position: 'absolute',
             inset: 0,
@@ -205,20 +236,33 @@ export const SteelRack: React.FC = () => {
             backgroundColor: '#0B0F14',
           }}
         >
-          <ambientLight intensity={0.35} color="#ffffff" />
-          <directionalLight position={[5, 8, 5]} intensity={1} color="#ffffff" />
+          <ambientLight intensity={0.8} color="#ffffff" />
           <directionalLight
-            position={[-5, 4, -5]}
-            intensity={0.6}
+            position={[3, 8, 3]}
+            intensity={2.5}
+            color="#ffffff"
+          />
+          <directionalLight
+            position={[-3, 2, -5]}
+            intensity={1.2}
             color="#A3E635"
           />
-          <ModelErrorBoundary>
-            <Suspense fallback={<Loading />}>
-              <RackScene groupRef={groupRef} cameraRef={cameraRef} />
-            </Suspense>
-          </ModelErrorBoundary>
+          <Environment preset="warehouse" />
+          <Suspense fallback={null}>
+            <RackScene scrollProgress={scrollProgress} />
+          </Suspense>
         </Canvas>
-      </div>
+      </ModelErrorBoundary>
+    </div>
+  ) : (
+    <div className="flex items-center justify-center h-[60vh] text-slate-600 text-sm">
+      Steel rack 3D view (scroll to load)
+    </div>
+  );
+
+  return (
+    <section ref={sectionRef} className="relative w-full bg-[#0B0F14] text-[#E0E2EA]" style={{ height: '200vh' }}>
+      {canvasContent}
 
       {/* Headline + caption overlay */}
       <div className="absolute inset-0 z-20 flex items-center px-6 pointer-events-none">

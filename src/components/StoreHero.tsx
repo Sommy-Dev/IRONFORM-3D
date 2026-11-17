@@ -29,9 +29,32 @@ function useMediaQueries() {
   return state;
 }
 
+function useConnectionOK() {
+  const [ok, setOk] = useState(true);
+  useEffect(() => {
+    const conn = (navigator as any).connection;
+    if (!conn) {
+      setOk(true);
+      return;
+    }
+    const update = () => {
+      setOk(
+        !conn.saveData &&
+          conn.effectiveType !== 'slow-2g' &&
+          conn.effectiveType !== '2g',
+      );
+    };
+    update();
+    conn.addEventListener('change', update);
+    return () => conn.removeEventListener('change', update);
+  }, []);
+  return ok;
+}
+
 export const StoreHero: React.FC = () => {
   const { isMobile, prefersReducedMotion } = useMediaQueries();
-  const showFallback = isMobile || prefersReducedMotion;
+  const connectionOK = useConnectionOK();
+  const showFallback = prefersReducedMotion || (isMobile && !connectionOK);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -59,6 +82,7 @@ export const StoreHero: React.FC = () => {
             loop
             playsInline
             preload="metadata"
+            poster="/images/hero.jpg"
             className="w-full h-full object-cover"
             aria-hidden="true"
           >
