@@ -31,7 +31,7 @@ export const HomeCTA: React.FC = () => {
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-2 px-8 py-4 text-sm uppercase font-semibold tracking-wider text-white border border-[#374151] hover:border-[#A3E635] hover:text-[#A3E635] active:scale-[0.98] transition-all rounded-md"
           >
-            <Phone className="w-4 h-4" /> Order on WhatsApp
+            <Phone className="w-4 h-4" /> Ask on WhatsApp
           </a>
         </div>
       </div>

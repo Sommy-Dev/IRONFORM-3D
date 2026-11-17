@@ -1,29 +1,13 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Search, SlidersHorizontal, SortAsc, Filter, X } from 'lucide-react';
-import { type Product } from '../data/products';
-import { PRODUCTS } from '../data/products';
+import { type Product, fetchProducts } from '../data/products';
 import { FadeUp } from '../components/FadeUp';
 import { useCart } from '../context/CartContext';
 
-type CategoryKey =
-  | 'dumbbells-kettlebells'
-  | 'barbells-plates'
-  | 'benches-racks'
-  | 'cardio'
-  | 'resistance-bands'
-  | 'accessories';
+type CategoryKey = string;
 
-const CATEGORY_MAP: Record<string, CategoryKey> = {
-  'dumbbells-kettlebells': 'dumbbells-kettlebells',
-  'barbells-plates': 'barbells-plates',
-  'benches-racks': 'benches-racks',
-  cardio: 'cardio',
-  'resistance-bands': 'resistance-bands',
-  accessories: 'accessories',
-};
-
-const CATEGORY_LABELS: Record<CategoryKey, string> = {
+const CATEGORY_LABELS: Record<string, string> = {
   'dumbbells-kettlebells': 'Dumbbells & Kettlebells',
   'barbells-plates': 'Barbells & Plates',
   'benches-racks': 'Benches & Racks',
@@ -41,6 +25,22 @@ const CATEGORIES: CategoryKey[] = [
   'accessories',
 ];
 
+function ProductSkeleton() {
+  return (
+    <article className="bg-[#111827] border border-[#1F2937] rounded-xl overflow-hidden flex flex-col animate-pulse">
+      <div className="aspect-[4/5] w-full bg-[#0B0F14]" />
+      <div className="p-5 flex-1 flex flex-col">
+        <div className="flex justify-between items-start mb-1">
+          <div className="h-5 w-32 bg-[#1F2937] rounded" />
+          <div className="h-5 w-16 bg-[#1F2937] rounded" />
+        </div>
+        <div className="h-4 w-24 bg-[#1F2937] rounded mt-4 mb-4" />
+        <div className="mt-auto h-8 w-full bg-[#1F2937] rounded" />
+      </div>
+    </article>
+  );
+}
+
 export const ShopPage: React.FC = () => {
   const { addToCart } = useCart();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -53,6 +53,29 @@ export const ShopPage: React.FC = () => {
   const [sort, setSort] = useState<'featured' | 'price-asc' | 'price-desc'>(
     (searchParams.get('sort') as any) || 'featured',
   );
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchProducts(activeCategory ?? undefined);
+        if (!cancelled) setProducts(data);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeCategory]);
 
   const handleSearch = useCallback(
     (e: React.FormEvent) => {
@@ -98,7 +121,7 @@ export const ShopPage: React.FC = () => {
   );
 
   const filtered = useMemo(() => {
-    return PRODUCTS.filter((product) => {
+    return products.filter((product) => {
       const matchesQuery =
         !searchQuery ||
         product.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -106,7 +129,7 @@ export const ShopPage: React.FC = () => {
         !activeCategory || product.category === activeCategory;
       return matchesQuery && matchesCategory;
     });
-  }, [searchQuery, activeCategory]);
+  }, [products, searchQuery, activeCategory]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -114,6 +137,90 @@ export const ShopPage: React.FC = () => {
     if (sort === 'price-desc') arr.sort((a, b) => b.price - a.price);
     return arr;
   }, [filtered, sort]);
+
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 py-20">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <ProductSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+          <X className="w-10 h-10 mx-auto mb-3 text-slate-500" />
+          <p className="text-lg text-white font-medium">
+            Failed to load products
+          </p>
+          <p className="text-sm text-slate-400">{error}</p>
+          <button
+            onClick={() => {
+              setLoading(true);
+              setError(null);
+              window.location.reload();
+            }}
+            className="mt-4 px-5 py-3 rounded-lg bg-[#A3E635] text-[#0B0F14] font-semibold hover:bg-[#b2f746] transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 [@media(min-width:480px)]:grid-cols-2 [@media(min-width:768px)]:grid-cols-3 gap-6">
+        {sorted.length === 0 ? (
+          <div className="col-span-full py-20 text-center">
+            <X className="w-10 h-10 mx-auto mb-3 text-slate-500" />
+            <p className="text-lg text-white font-medium">No products found</p>
+            <p className="text-sm text-slate-400">
+              Try adjusting your search or filters.
+            </p>
+          </div>
+        ) : (
+          sorted.map((product) => (
+            <article
+              key={product.id}
+              className="bg-[#111827] border border-[#1F2937] rounded-xl overflow-hidden flex flex-col group hover:border-[#A3E635]/50 transition-colors"
+            >
+              <div className="aspect-[4/5] w-full overflow-hidden bg-[#0B0F14]">
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                />
+              </div>
+              <div className="p-5 flex-1 flex flex-col">
+                <div className="flex justify-between items-start mb-1">
+                  <h3 className="font-semibold text-white text-lg">
+                    {product.name}
+                  </h3>
+                  <span className="text-[#A3E635] font-semibold">
+                    ₦{product.price.toLocaleString()}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mb-4">
+                  {product.category}
+                </p>
+                <button
+                  onClick={() => addToCart(product)}
+                  className="w-full py-3 text-sm font-semibold text-[#0B0F14] bg-[#A3E635] hover:bg-[#b2f746] active:scale-[0.98] rounded-md transition-all"
+                >
+                  Add to cart
+                </button>
+              </div>
+            </article>
+          ))
+        )}
+      </div>
+    );
+  };
 
   return (
     <section className="py-20 bg-[#0B0F14] min-h-[calc(100vh-16rem)]">
@@ -215,51 +322,7 @@ export const ShopPage: React.FC = () => {
 
       <FadeUp className="mb-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 [@media(min-width:480px)]:grid-cols-2 [@media(min-width:768px)]:grid-cols-3 gap-6">
-            {sorted.length === 0 ? (
-              <div className="col-span-full py-20 text-center">
-                <X className="w-10 h-10 mx-auto mb-3 text-slate-500" />
-                <p className="text-lg text-white font-medium">No products found</p>
-                <p className="text-sm text-slate-400">
-                  Try adjusting your search or filters.
-                </p>
-              </div>
-            ) : (
-              sorted.map((product) => (
-                <article
-                  key={product.id}
-                  className="bg-[#111827] border border-[#1F2937] rounded-xl overflow-hidden flex flex-col group hover:border-[#A3E635]/50 transition-colors"
-                >
-                  <div className="aspect-[4/5] w-full overflow-hidden bg-[#0B0F14]">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                    />
-                  </div>
-                  <div className="p-5 flex-1 flex flex-col">
-                    <div className="flex justify-between items-start mb-1">
-                      <h3 className="font-semibold text-white text-lg">
-                        {product.name}
-                      </h3>
-                      <span className="text-[#A3E635] font-semibold">
-                        ₦{product.price.toLocaleString()}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-400 mb-4">
-                      {product.category}
-                    </p>
-                    <button
-                      onClick={() => addToCart(product)}
-                      className="w-full py-3 text-sm font-semibold text-[#0B0F14] bg-[#A3E635] hover:bg-[#b2f746] active:scale-[0.98] rounded-md transition-all"
-                    >
-                      Add to cart
-                    </button>
-                  </div>
-                </article>
-              ))
-            )}
-          </div>
+          {renderContent()}
         </div>
       </FadeUp>
     </section>

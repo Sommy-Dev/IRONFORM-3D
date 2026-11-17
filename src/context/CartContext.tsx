@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useCallback, ReactNode, useState } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, ReactNode, useState, useEffect } from 'react';
 import { type Product } from '../data/products';
 
 type CartItem = Product & { qty: number };
@@ -14,7 +14,9 @@ type CartAction =
   | { type: 'CHANGE_QTY'; id: string; delta: number }
   | { type: 'OPEN_DRAWER' }
   | { type: 'CLOSE_DRAWER' }
-  | { type: 'TOGGLE_DRAWER' };
+  | { type: 'TOGGLE_DRAWER' }
+  | { type: 'HYDRATE'; items: CartItem[] }
+  | { type: 'CLEAR' };
 
 const initialState: CartState = { items: [], drawerOpen: false };
 
@@ -50,6 +52,10 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       return { ...state, drawerOpen: false };
     case 'TOGGLE_DRAWER':
       return { ...state, drawerOpen: !state.drawerOpen };
+    case 'HYDRATE':
+      return { ...state, items: action.items };
+    case 'CLEAR':
+      return { ...state, items: [], drawerOpen: false };
     default:
       return state;
   }
@@ -66,10 +72,38 @@ const CartContext = createContext<{
   openDrawer: () => void;
   closeDrawer: () => void;
   toggleDrawer: () => void;
+  clearCart: () => void;
 } | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, initialState);
+
+  // Load cart from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('ironform_cart');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && Array.isArray(parsed.items)) {
+          dispatch({ type: 'HYDRATE', items: parsed.items });
+        }
+      }
+    } catch {
+      // ignore localStorage errors
+    }
+  }, []);
+
+  // Persist cart to localStorage whenever items change
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        'ironform_cart',
+        JSON.stringify({ items: state.items }),
+      );
+    } catch {
+      // ignore localStorage errors
+    }
+  }, [state.items]);
 
   const total = state.items.reduce((sum, i) => sum + i.price * i.qty, 0);
   const itemCount = state.items.reduce((sum, i) => sum + i.qty, 0);
@@ -90,6 +124,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const closeDrawer = useCallback(() => dispatch({ type: 'CLOSE_DRAWER' }), []);
   const toggleDrawer = useCallback(() => dispatch({ type: 'TOGGLE_DRAWER' }), []);
 
+  const clearCart = useCallback(() => {
+    dispatch({ type: 'CLEAR' });
+    try {
+      localStorage.removeItem('ironform_cart');
+    } catch {
+      // ignore
+    }
+  }, []);
+
   return (
     <CartContext.Provider value={{
       items: state.items,
@@ -102,6 +145,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       openDrawer,
       closeDrawer,
       toggleDrawer,
+      clearCart,
     }}>
       {children}
     </CartContext.Provider>

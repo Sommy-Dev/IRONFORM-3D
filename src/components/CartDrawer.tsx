@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Minus, Plus, Phone } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { type Product } from '../data/products';
 import { WHATSAPP_NUMBER } from '../data/products';
 import { useCart } from '../context/CartContext';
@@ -8,6 +9,7 @@ type CartItem = Product & { qty: number };
 
 export const CartDrawer: React.FC = () => {
   const { items, total, itemCount, drawerOpen, closeDrawer, removeFromCart, changeQty } = useCart();
+  const navigate = useNavigate();
 
   const buildMessage = () => {
     const lines = items
@@ -98,17 +100,22 @@ export const CartDrawer: React.FC = () => {
           <button
             onClick={() => {
               if (items.length === 0) return;
-              window.open(
-                `https://wa.me/${WHATSAPP_NUMBER}?text=${buildMessage()}`,
-                '_blank',
-              );
+              navigate('/checkout');
               closeDrawer();
             }}
             disabled={items.length === 0}
             className="w-full mt-4 py-3 text-sm uppercase font-semibold tracking-wider text-[#0B0F14] bg-[#A3E635] hover:bg-[#b2f746] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none rounded-md transition-all shadow-lg shadow-[#A3E635]/20"
           >
-            Order on WhatsApp
+            Checkout
           </button>
+          <a
+            href={`https://wa.me/${WHATSAPP_NUMBER}?text=${buildMessage()}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full mt-3 py-3 text-sm uppercase font-semibold tracking-wider text-white border border-[#374151] hover:border-[#A3E635] hover:text-[#A3E635] active:scale-[0.98] transition-all rounded-md text-center"
+          >
+            <Phone className="w-4 h-4 inline mr-2" /> Ask on WhatsApp
+          </a>
           <p className="mt-3 text-xs text-slate-500 text-center">
             Opens WhatsApp to{' '}
             <span className="text-[#A3E635] font-medium">{WHATSAPP_NUMBER}</span>

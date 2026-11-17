@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
 import { StoreNavbar } from './components/StoreNavbar';
@@ -14,7 +14,9 @@ import { StoreFooter } from './components/StoreFooter';
 import { CartDrawer } from './components/CartDrawer';
 import { ScrollToTop } from './components/ScrollToTop';
 import { ShopPage } from './pages/Shop';
-import { PRODUCTS } from './data/products';
+import { CheckoutPage } from './pages/Checkout';
+import { OrderSuccessPage } from './pages/OrderSuccess';
+import { fetchProducts, type Product } from './data/products';
 
 const SteelRack = React.lazy(() =>
   import('./components/SteelRack').then((mod) => ({ default: mod.SteelRack })),
@@ -36,9 +38,47 @@ class SteelRackErrorBoundary extends React.Component<
   }
 }
 
-const FEATURED = PRODUCTS.slice(0, 3);
-
 function HomePage() {
+  const [featured, setFeatured] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const data = await fetchProducts();
+        if (!cancelled) {
+          setFeatured(data.slice(0, 3));
+        }
+      } catch {
+        if (!cancelled) setFeatured([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <>
+        <StoreNavbar />
+        <main className="flex-1">
+          <section className="py-20 bg-[#0B0F14] text-center">
+            <div className="flex flex-col items-center justify-center h-64">
+              <div className="h-8 w-32 bg-[#1F2937] rounded animate-pulse mb-4" />
+              <div className="h-4 w-full bg-[#1F2937] rounded animate-pulse" />
+            </div>
+          </section>
+        </main>
+        <StoreFooter />
+      </>
+    );
+  }
+
   return (
     <>
       <StoreNavbar />
@@ -64,7 +104,7 @@ function HomePage() {
         </SteelRackErrorBoundary>
         <HomeIntroStrip />
         <HomeCategoryCards />
-        <HomeFeaturedProducts products={FEATURED} />
+        <HomeFeaturedProducts products={featured} />
         <HomeBenefits />
         <HomeNumbersStrip />
         <HomeTestimonials />
@@ -88,6 +128,30 @@ function ShopLayout() {
   );
 }
 
+function CheckoutLayout() {
+  return (
+    <>
+      <StoreNavbar />
+      <main className="flex-1">
+        <CheckoutPage />
+      </main>
+      <StoreFooter />
+    </>
+  );
+}
+
+function OrderSuccessLayout() {
+  return (
+    <>
+      <StoreNavbar />
+      <main className="flex-1">
+        <OrderSuccessPage />
+      </main>
+      <StoreFooter />
+    </>
+  );
+}
+
 export default function App() {
   return (
     <CartProvider>
@@ -96,6 +160,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/shop" element={<ShopLayout />} />
+          <Route path="/checkout" element={<CheckoutLayout />} />
+          <Route path="/order/success" element={<OrderSuccessLayout />} />
         </Routes>
       </BrowserRouter>
     </CartProvider>
