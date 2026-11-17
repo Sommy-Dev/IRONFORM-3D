@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Mail, Phone, Home, MapPin } from 'lucide-react';
+import { formatNaira } from '../data/products';
 import { useCart } from '../context/CartContext';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
@@ -49,7 +50,7 @@ export const CheckoutPage: React.FC = () => {
             customer: formData,
             items: items.map((i) => ({
               productId: i.id,
-              quantity: i.qty,
+              quantity: i.quantity,
             })),
           }),
         });
@@ -180,11 +181,11 @@ export const CheckoutPage: React.FC = () => {
                       {item.name}
                     </h4>
                     <p className="text-xs text-slate-400">
-                      {item.qty}x ₦{item.price.toLocaleString()}
+                      {item.quantity}x {formatNaira(item.price_ngn)}
                     </p>
                   </div>
                   <span className="font-semibold text-white">
-                    ₦{(item.price * item.qty).toLocaleString()}
+                    {formatNaira(item.price_ngn * item.quantity)}
                   </span>
                 </div>
               ))}
@@ -192,7 +193,7 @@ export const CheckoutPage: React.FC = () => {
             <div className="mt-6 pt-6 border-t border-[#1F2937]">
               <div className="flex justify-between text-lg font-bold text-white mb-1">
                 <span>Total</span>
-                <span>₦{total.toLocaleString()}</span>
+                <span>{formatNaira(total)}</span>
               </div>
               <p className="text-xs text-slate-500">
                 You’ll be redirected to Paystack to complete payment.

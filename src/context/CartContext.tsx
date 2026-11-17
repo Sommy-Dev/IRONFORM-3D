@@ -1,7 +1,13 @@
 import React, { createContext, useContext, useReducer, useCallback, ReactNode, useState, useEffect } from 'react';
-import { type Product } from '../data/products';
+import { type Product, formatNaira } from '../data/products';
 
-type CartItem = Product & { qty: number };
+type CartItem = {
+  id: string;
+  name: string;
+  price_ngn: number;
+  image_url: string | null;
+  quantity: number;
+};
 
 type CartState = {
   items: CartItem[];
@@ -20,6 +26,16 @@ type CartAction =
 
 const initialState: CartState = { items: [], drawerOpen: false };
 
+function isValidCartItem(item: any): item is CartItem {
+  return (
+    item &&
+    typeof item.id === 'string' &&
+    typeof item.name === 'string' &&
+    typeof item.price_ngn === 'number' &&
+    typeof item.quantity === 'number'
+  );
+}
+
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case 'ADD': {
@@ -27,13 +43,24 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       if (existing) {
         return {
           items: state.items.map((i) =>
-            i.id === action.product.id ? { ...i, qty: i.qty + 1 } : i,
+            i.id === action.product.id
+              ? { ...i, quantity: i.quantity + 1 }
+              : i,
           ),
           drawerOpen: true,
         };
       }
       return {
-        items: [...state.items, { ...action.product, qty: 1 }],
+        items: [
+          ...state.items,
+          {
+            id: action.product.id,
+            name: action.product.name,
+            price_ngn: action.product.price_ngn,
+            image_url: action.product.image_url ?? null,
+            quantity: 1,
+          },
+        ],
         drawerOpen: true,
       };
     }
@@ -42,9 +69,9 @@ function cartReducer(state: CartState, action: CartAction): CartState {
     case 'CHANGE_QTY': {
       const next = state.items.map((i) => {
         if (i.id !== action.id) return i;
-        return { ...i, qty: Math.max(0, i.qty + action.delta) };
+        return { ...i, quantity: Math.max(0, i.quantity + action.delta) };
       });
-      return { ...state, items: next.filter((i) => i.qty > 0) };
+      return { ...state, items: next.filter((i) => i.quantity > 0) };
     }
     case 'OPEN_DRAWER':
       return { ...state, drawerOpen: true };
@@ -53,7 +80,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
     case 'TOGGLE_DRAWER':
       return { ...state, drawerOpen: !state.drawerOpen };
     case 'HYDRATE':
-      return { ...state, items: action.items };
+      return { ...state, items: action.items.filter(isValidCartItem) };
     case 'CLEAR':
       return { ...state, items: [], drawerOpen: false };
     default:
@@ -78,14 +105,23 @@ const CartContext = createContext<{
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, initialState);
 
-  // Load cart from localStorage on mount
+  // Load cart from localStorage on mount, with migration guard
   useEffect(() => {
     try {
       const stored = localStorage.getItem('ironform_cart');
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed && Array.isArray(parsed.items)) {
-          dispatch({ type: 'HYDRATE', items: parsed.items });
+          // Migration: if any item has old 'price' field instead of 'price_ngn', reset
+          const hasOldShape = parsed.items.some(
+            (i: any) => i.price !== undefined && i.price_ngn === undefined,
+          );
+          if (hasOldShape) {
+            localStorage.removeItem('ironform_cart');
+            dispatch({ type: 'CLEAR' });
+          } else {
+            dispatch({ type: 'HYDRATE', items: parsed.items });
+          }
         }
       }
     } catch {
@@ -105,8 +141,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [state.items]);
 
-  const total = state.items.reduce((sum, i) => sum + i.price * i.qty, 0);
-  const itemCount = state.items.reduce((sum, i) => sum + i.qty, 0);
+  const total = state.items.reduce((sum, i) => sum + i.price_ngn * i.quantity, 0);
+  const itemCount = state.items.reduce((sum, i) => sum + i.quantity, 0);
 
   const addToCart = useCallback((product: Product) => {
     dispatch({ type: 'ADD', product });
@@ -159,3 +195,5 @@ export function useCart() {
   }
   return ctx;
 }
+
+export { formatNaira };

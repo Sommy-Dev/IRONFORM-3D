@@ -1,9 +1,11 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Search, SlidersHorizontal, SortAsc, Filter, X } from 'lucide-react';
-import { type Product, fetchProducts } from '../data/products';
+import { Search, SlidersHorizontal, Filter, X } from 'lucide-react';
+import { type Product, fetchProducts, formatNaira } from '../data/products';
 import { FadeUp } from '../components/FadeUp';
 import { useCart } from '../context/CartContext';
+
+const PLACEHOLDER_IMAGE = 'https://placehold.co/600x600?text=Product';
 
 type CategoryKey = string;
 
@@ -66,7 +68,8 @@ export const ShopPage: React.FC = () => {
         const data = await fetchProducts(activeCategory ?? undefined);
         if (!cancelled) setProducts(data);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : String(err));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -133,8 +136,8 @@ export const ShopPage: React.FC = () => {
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
-    if (sort === 'price-asc') arr.sort((a, b) => a.price - b.price);
-    if (sort === 'price-desc') arr.sort((a, b) => b.price - a.price);
+    if (sort === 'price-asc') arr.sort((a, b) => a.price_ngn - b.price_ngn);
+    if (sort === 'price-desc') arr.sort((a, b) => b.price_ngn - a.price_ngn);
     return arr;
   }, [filtered, sort]);
 
@@ -191,7 +194,7 @@ export const ShopPage: React.FC = () => {
             >
               <div className="aspect-[4/5] w-full overflow-hidden bg-[#0B0F14]">
                 <img
-                  src={product.image}
+                  src={product.image_url ?? PLACEHOLDER_IMAGE}
                   alt={product.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                 />
@@ -202,7 +205,7 @@ export const ShopPage: React.FC = () => {
                     {product.name}
                   </h3>
                   <span className="text-[#A3E635] font-semibold">
-                    ₦{product.price.toLocaleString()}
+                    {formatNaira(product.price_ngn)}
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 mb-4">
@@ -257,42 +260,11 @@ export const ShopPage: React.FC = () => {
       <FadeUp className="mb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => handleSort('featured')}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  sort === 'featured'
-                    ? 'bg-[#A3E635] text-[#0B0F14]'
-                    : 'bg-[#111827] border border-[#1F2937] text-white hover:bg-[#181C21]'
-                }`}
-              >
-                Featured
-              </button>
-              <button
-                onClick={() => handleSort('price-asc')}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  sort === 'price-asc'
-                    ? 'bg-[#A3E635] text-[#0B0F14]'
-                    : 'bg-[#111827] border border-[#1F2937] text-white hover:bg-[#181C21]'
-                }`}
-              >
-                Price: low to high <SortAsc className="w-3.5 h-3.5 ml-1" />
-              </button>
-              <button
-                onClick={() => handleSort('price-desc')}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  sort === 'price-desc'
-                    ? 'bg-[#A3E635] text-[#0B0F14]'
-                    : 'bg-[#111827] border border-[#1F2937] text-white hover:bg-[#181C21]'
-                }`}
-              >
-                Price: high to low
-              </button>
-            </div>
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar md:overflow-visible md:pb-0">
+            {/* Category chips row (scrollable on mobile) */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar md:overflow-visible md:pb-0 min-w-0">
               <button
                 onClick={() => handleCategory(null)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
                   activeCategory === null
                     ? 'bg-[#A3E635] text-[#0B0F14]'
                     : 'bg-[#111827] border border-[#1F2937] text-white hover:bg-[#181C21]'
@@ -306,7 +278,7 @@ export const ShopPage: React.FC = () => {
                   onClick={() =>
                     handleCategory(activeCategory === cat ? null : cat)
                   }
-                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                  className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
                     activeCategory === cat
                       ? 'bg-[#A3E635] text-[#0B0F14]'
                       : 'bg-[#111827] border border-[#1F2937] text-white hover:bg-[#181C21]'
@@ -315,6 +287,19 @@ export const ShopPage: React.FC = () => {
                   {CATEGORY_LABELS[cat]}
                 </button>
               ))}
+            </div>
+
+            {/* Sort dropdown */}
+            <div className="shrink-0">
+              <select
+                value={sort}
+                onChange={(e) => handleSort(e.target.value as any)}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-[#111827] border border-[#1F2937] text-white focus:ring-2 focus:ring-[#A3E635] outline-none transition-colors"
+              >
+                <option value="featured">Featured</option>
+                <option value="price-asc">Price low to high</option>
+                <option value="price-desc">Price high to low</option>
+              </select>
             </div>
           </div>
         </div>

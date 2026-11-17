@@ -1,5 +1,7 @@
 import React from 'react';
-import { type Product } from '../data/products';
+import { type Product, formatNaira } from '../data/products';
+
+const PLACEHOLDER_IMAGE = 'https://placehold.co/600x600?text=Product';
 
 interface ProductCardProps {
   product: Product;
@@ -11,7 +13,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
     <article className="bg-[#111827] border border-[#1F2937] rounded-xl overflow-hidden flex flex-col group">
       <div className="aspect-[4/5] w-full overflow-hidden bg-[#0B0F14]">
         <img
-          src={product.image}
+          src={product.image_url ?? PLACEHOLDER_IMAGE}
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
         />
@@ -20,7 +22,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
         <div className="flex justify-between items-start mb-1">
           <h3 className="font-semibold text-white text-lg">{product.name}</h3>
           <span className="text-[#A3E635] font-semibold">
-            ₦{product.price.toLocaleString()}
+            {formatNaira(product.price_ngn)}
           </span>
         </div>
         <p className="text-xs text-slate-400 mb-4">{product.category}</p>

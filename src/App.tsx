@@ -13,6 +13,7 @@ import { HomeCTA } from './components/HomeCTA';
 import { StoreFooter } from './components/StoreFooter';
 import { CartDrawer } from './components/CartDrawer';
 import { ScrollToTop } from './components/ScrollToTop';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ShopPage } from './pages/Shop';
 import { CheckoutPage } from './pages/Checkout';
 import { OrderSuccessPage } from './pages/OrderSuccess';
@@ -104,7 +105,15 @@ function HomePage() {
         </SteelRackErrorBoundary>
         <HomeIntroStrip />
         <HomeCategoryCards />
-        <HomeFeaturedProducts products={featured} />
+        <ErrorBoundary
+          fallback={
+            <section className="w-full bg-[#0B0F14] text-[#E0E2EA] py-20 text-center">
+              <p className="text-sm font-medium text-white">Featured products unavailable</p>
+            </section>
+          }
+        >
+          <HomeFeaturedProducts products={featured} />
+        </ErrorBoundary>
         <HomeBenefits />
         <HomeNumbersStrip />
         <HomeTestimonials />

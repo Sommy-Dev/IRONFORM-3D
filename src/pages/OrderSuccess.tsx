@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { CheckCircle, XCircle, ArrowRight, Mail, Phone } from 'lucide-react';
+import { formatNaira } from '../data/products';
 import { useCart } from '../context/CartContext';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
@@ -125,8 +126,7 @@ export const OrderSuccessPage: React.FC = () => {
                     </p>
                   </div>
                   <span className="font-semibold text-white">
-                    ₦{((item.unit_price || item.product?.price || 0) *
-                      item.quantity).toLocaleString()}
+                    {formatNaira(((item.unit_price || item.product?.price_ngn || 0) * item.quantity))}
                   </span>
                 </div>
               ))}
@@ -134,7 +134,7 @@ export const OrderSuccessPage: React.FC = () => {
 
             <div className="flex justify-between text-lg font-bold text-white">
               <span>Total</span>
-              <span>₦{order.total.toLocaleString()}</span>
+              <span>{formatNaira(order.total)}</span>
             </div>
           </div>
 

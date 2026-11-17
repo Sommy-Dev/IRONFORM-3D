@@ -1,11 +1,19 @@
 import React from 'react';
 import { X, Minus, Plus, Phone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { type Product } from '../data/products';
+import { formatNaira } from '../data/products';
 import { WHATSAPP_NUMBER } from '../data/products';
 import { useCart } from '../context/CartContext';
 
-type CartItem = Product & { qty: number };
+const PLACEHOLDER_IMAGE = 'https://placehold.co/600x600?text=Product';
+
+type CartItem = {
+  id: string;
+  name: string;
+  price_ngn: number;
+  image_url: string | null;
+  quantity: number;
+};
 
 export const CartDrawer: React.FC = () => {
   const { items, total, itemCount, drawerOpen, closeDrawer, removeFromCart, changeQty } = useCart();
@@ -15,10 +23,10 @@ export const CartDrawer: React.FC = () => {
     const lines = items
       .map(
         (i) =>
-          `- ${i.qty}x ${i.name} - ₦${(i.price * i.qty).toLocaleString()}`,
+          `- ${i.quantity}x ${i.name} - ${formatNaira(i.price_ngn * i.quantity)}`,
       )
       .join('%0A');
-    return `Hi IRONFORM Gear,%0A%0AI'd like to order:%0A${lines}%0A%0ATotal: ₦${total.toLocaleString()}`;
+    return `Hi IRONFORM Gear,%0A%0AI'd like to order:%0A${lines}%0A%0ATotal: ${formatNaira(total)}`;
   };
 
   if (!drawerOpen) return null;
@@ -50,7 +58,7 @@ export const CartDrawer: React.FC = () => {
               {items.map((item) => (
                 <div key={item.id} className="flex items-center gap-3">
                   <img
-                    src={item.image}
+                    src={item.image_url ?? PLACEHOLDER_IMAGE}
                     alt={item.name}
                     className="w-12 h-12 object-cover rounded bg-[#0B0F14]"
                   />
@@ -67,7 +75,7 @@ export const CartDrawer: React.FC = () => {
                       </button>
                     </div>
                     <p className="text-xs text-slate-400">
-                      ₦{item.price.toLocaleString()} each
+                      {formatNaira(item.price_ngn)} each
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
@@ -78,7 +86,7 @@ export const CartDrawer: React.FC = () => {
                       <Minus className="w-3 h-3" />
                     </button>
                     <span className="w-5 text-center text-sm font-semibold text-white">
-                      {item.qty}
+                      {item.quantity}
                     </span>
                     <button
                       onClick={() => changeQty(item.id, 1)}
@@ -95,7 +103,7 @@ export const CartDrawer: React.FC = () => {
         <div className="p-5 border-t border-[#1F2937] bg-[#0B0F14]/50">
           <div className="flex justify-between text-lg font-bold text-white mb-1">
             <span>Total</span>
-            <span>₦{total.toLocaleString()}</span>
+            <span>{formatNaira(total)}</span>
           </div>
           <button
             onClick={() => {

@@ -1,8 +1,10 @@
 import React from 'react';
 import { ShoppingCart } from 'lucide-react';
-import { type Product } from '../data/products';
+import { type Product, formatNaira } from '../data/products';
 import { FadeUp } from './FadeUp';
 import { useCart } from '../context/CartContext';
+
+const PLACEHOLDER_IMAGE = 'https://placehold.co/600x600?text=Product';
 
 interface HomeFeaturedProductsProps {
   products: Product[];
@@ -31,7 +33,7 @@ export const HomeFeaturedProducts: React.FC<HomeFeaturedProductsProps> = ({
             >
               <div className="aspect-[4/5] w-full overflow-hidden bg-[#0B0F14]">
                 <img
-                  src={product.image}
+                  src={product.image_url ?? PLACEHOLDER_IMAGE}
                   alt={product.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                 />
@@ -42,7 +44,7 @@ export const HomeFeaturedProducts: React.FC<HomeFeaturedProductsProps> = ({
                     {product.name}
                   </h3>
                   <span className="text-[#A3E635] font-semibold">
-                    ₦{product.price.toLocaleString()}
+                    {formatNaira(product.price_ngn)}
                   </span>
                 </div>
                 <button
