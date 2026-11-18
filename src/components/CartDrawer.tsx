@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, Minus, Plus, Phone } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Minus, Plus, Phone, Dumbbell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatNaira } from '../data/products';
 import { WHATSAPP_NUMBER } from '../data/products';
@@ -18,6 +18,7 @@ type CartItem = {
 export const CartDrawer: React.FC = () => {
   const { items, total, itemCount, drawerOpen, closeDrawer, removeFromCart, changeQty } = useCart();
   const navigate = useNavigate();
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
   const buildMessage = () => {
     const lines = items
@@ -57,11 +58,21 @@ export const CartDrawer: React.FC = () => {
             <div className="space-y-4">
               {items.map((item) => (
                 <div key={item.id} className="flex items-center gap-3">
-                  <img
-                    src={item.image_url ?? PLACEHOLDER_IMAGE}
-                    alt={item.name}
-                    className="w-12 h-12 object-cover rounded bg-[#0B0F14]"
-                  />
+                  {imageErrors.has(item.id) ? (
+                    <div className="w-12 h-12 rounded bg-[#111827] flex items-center justify-center text-slate-500">
+                      <Dumbbell className="w-5 h-5" />
+                    </div>
+                  ) : (
+                    <img
+                      src={item.image_url ?? PLACEHOLDER_IMAGE}
+                      alt={item.name}
+                      className="w-12 h-12 object-cover rounded bg-[#0B0F14]"
+                      loading="lazy"
+                      onError={() =>
+                        setImageErrors((prev) => new Set([...prev, item.id]))
+                      }
+                    />
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between">
                       <h4 className="font-semibold text-white text-sm truncate">

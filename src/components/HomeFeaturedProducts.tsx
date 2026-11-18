@@ -1,5 +1,5 @@
-import React from 'react';
-import { ShoppingCart } from 'lucide-react';
+import React, { useState } from 'react';
+import { ShoppingCart, Dumbbell } from 'lucide-react';
 import { type Product, formatNaira } from '../data/products';
 import { FadeUp } from './FadeUp';
 import { useCart } from '../context/CartContext';
@@ -14,6 +14,7 @@ export const HomeFeaturedProducts: React.FC<HomeFeaturedProductsProps> = ({
   products,
 }) => {
   const { addToCart } = useCart();
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   return (
     <FadeUp className="py-20 border-y border-[#1F2937]/40 bg-[#0B0F14]/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -31,12 +32,23 @@ export const HomeFeaturedProducts: React.FC<HomeFeaturedProductsProps> = ({
               key={product.id}
               className="bg-[#111827] border border-[#1F2937] rounded-xl overflow-hidden flex flex-col group hover:border-[#A3E635]/50 transition-colors"
             >
-              <div className="aspect-[4/5] w-full overflow-hidden bg-[#0B0F14]">
-                <img
-                  src={product.image_url ?? PLACEHOLDER_IMAGE}
-                  alt={product.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                />
+              <div className="aspect-[4/3] w-full overflow-hidden bg-[#0B0F14]">
+                {imageErrors.has(product.id) ? (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-[#111827] text-slate-500">
+                    <Dumbbell className="w-8 h-8 mb-2" />
+                    <p className="text-xs text-center px-2">{product.name}</p>
+                  </div>
+                ) : (
+                  <img
+                    src={product.image_url ?? PLACEHOLDER_IMAGE}
+                    alt={product.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                    loading="lazy"
+                    onError={() =>
+                      setImageErrors((prev) => new Set([...prev, product.id]))
+                    }
+                  />
+                )}
               </div>
               <div className="p-5 flex-1 flex flex-col">
                 <div className="flex justify-between items-start mb-1">

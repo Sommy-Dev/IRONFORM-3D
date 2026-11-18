@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Search, SlidersHorizontal, Filter, X } from 'lucide-react';
+import { Search, Filter, X, Dumbbell } from 'lucide-react';
 import { type Product, fetchProducts, formatNaira } from '../data/products';
 import { FadeUp } from '../components/FadeUp';
 import { useCart } from '../context/CartContext';
@@ -30,7 +30,7 @@ const CATEGORIES: CategoryKey[] = [
 function ProductSkeleton() {
   return (
     <article className="bg-[#111827] border border-[#1F2937] rounded-xl overflow-hidden flex flex-col animate-pulse">
-      <div className="aspect-[4/5] w-full bg-[#0B0F14]" />
+      <div className="aspect-[4/3] w-full bg-[#0B0F14]" />
       <div className="p-5 flex-1 flex flex-col">
         <div className="flex justify-between items-start mb-1">
           <div className="h-5 w-32 bg-[#1F2937] rounded" />
@@ -58,6 +58,7 @@ export const ShopPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -192,12 +193,21 @@ export const ShopPage: React.FC = () => {
               key={product.id}
               className="bg-[#111827] border border-[#1F2937] rounded-xl overflow-hidden flex flex-col group hover:border-[#A3E635]/50 transition-colors"
             >
-              <div className="aspect-[4/5] w-full overflow-hidden bg-[#0B0F14]">
-                <img
-                  src={product.image_url ?? PLACEHOLDER_IMAGE}
-                  alt={product.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                />
+              <div className="aspect-[4/3] w-full overflow-hidden bg-[#0B0F14]">
+                {imageErrors.has(product.id) ? (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-[#111827] text-slate-500">
+                    <Dumbbell className="w-8 h-8 mb-2" />
+                    <p className="text-xs text-center px-2">{product.name}</p>
+                  </div>
+                ) : (
+                  <img
+                    src={product.image_url ?? PLACEHOLDER_IMAGE}
+                    alt={product.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                    loading="lazy"
+                    onError={() => setImageErrors((prev) => new Set([...prev, product.id]))}
+                  />
+                )}
               </div>
               <div className="p-5 flex-1 flex flex-col">
                 <div className="flex justify-between items-start mb-1">
