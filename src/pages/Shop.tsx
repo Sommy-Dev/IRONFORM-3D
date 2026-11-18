@@ -1,31 +1,13 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Search, Filter, X, Dumbbell } from 'lucide-react';
-import { type Product, fetchProducts, formatNaira } from '../data/products';
+import { type Product, fetchProducts, formatNaira, slugify } from '../data/products';
 import { FadeUp } from '../components/FadeUp';
 import { useCart } from '../context/CartContext';
 
 const PLACEHOLDER_IMAGE = 'https://placehold.co/600x600?text=Product';
 
 type CategoryKey = string;
-
-const CATEGORY_LABELS: Record<string, string> = {
-  'dumbbells-kettlebells': 'Dumbbells & Kettlebells',
-  'barbells-plates': 'Barbells & Plates',
-  'benches-racks': 'Benches & Racks',
-  cardio: 'Cardio Machines',
-  'resistance-bands': 'Resistance & Bands',
-  accessories: 'Accessories',
-};
-
-const CATEGORIES: CategoryKey[] = [
-  'dumbbells-kettlebells',
-  'barbells-plates',
-  'benches-racks',
-  'cardio',
-  'resistance-bands',
-  'accessories',
-];
 
 function ProductSkeleton() {
   return (
@@ -60,13 +42,22 @@ export const ShopPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
+  const availableCategories = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const p of products) {
+      const s = slugify(p.category);
+      if (!seen.has(s)) seen.set(s, p.category);
+    }
+    return Array.from(seen.entries());
+  }, [products]);
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
       setLoading(true);
       setError(null);
       try {
-        const data = await fetchProducts(activeCategory ?? undefined);
+        const data = await fetchProducts();
         if (!cancelled) setProducts(data);
       } catch (err) {
         if (!cancelled)
@@ -79,7 +70,7 @@ export const ShopPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [activeCategory]);
+  }, []);
 
   const handleSearch = useCallback(
     (e: React.FormEvent) => {
@@ -130,7 +121,7 @@ export const ShopPage: React.FC = () => {
         !searchQuery ||
         product.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory =
-        !activeCategory || product.category === activeCategory;
+        !activeCategory || slugify(product.category) === activeCategory;
       return matchesQuery && matchesCategory;
     });
   }, [products, searchQuery, activeCategory]);
@@ -282,19 +273,19 @@ export const ShopPage: React.FC = () => {
               >
                 All
               </button>
-              {CATEGORIES.map((cat) => (
+              {availableCategories.map(([slug, name]) => (
                 <button
-                  key={cat}
+                  key={slug}
                   onClick={() =>
-                    handleCategory(activeCategory === cat ? null : cat)
+                    handleCategory(activeCategory === slug ? null : slug)
                   }
                   className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                    activeCategory === cat
+                    activeCategory === slug
                       ? 'bg-[#A3E635] text-[#0B0F14]'
                       : 'bg-[#111827] border border-[#1F2937] text-white hover:bg-[#181C21]'
                   }`}
                 >
-                  {CATEGORY_LABELS[cat]}
+                  {name}
                 </button>
               ))}
             </div>

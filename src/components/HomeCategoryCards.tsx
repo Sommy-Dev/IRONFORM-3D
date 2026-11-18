@@ -8,6 +8,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { FadeUp } from './FadeUp';
+import { slugify } from '../data/products';
 
 type Category = {
   id: string;
@@ -64,7 +65,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
   return (
     <FadeUp className="group cursor-pointer" delay={100}>
       <Link
-        to={`/shop?category=${category.id}`}
+        to={`/shop?category=${slugify(category.name)}`}
         className="block bg-[#111827] border border-[#1F2937] rounded-xl p-6 text-center hover:border-[#A3E635]/60 hover:bg-[#0B0F14]/50 transition-all"
       >
         <div className="w-12 h-12 rounded-lg bg-[#A3E635]/10 text-[#A3E635] flex items-center justify-center mx-auto mb-4 group-hover:bg-[#A3E635] group-hover:text-[#0B0F14] transition-colors">

@@ -14,6 +14,15 @@ export function formatNaira(value: number | null | undefined): string {
   return '₦' + Number(value ?? 0).toLocaleString('en-NG');
 }
 
+export function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[&]/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
 
 export async function fetchProducts(category?: string): Promise<Product[]> {

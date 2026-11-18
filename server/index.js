@@ -43,17 +43,11 @@ app.get('/api/health', (_req, res) => {
 
 app.get('/api/products', async (req, res) => {
   try {
-    let query = supabase
+    const { data, error } = await supabase
       .from('products')
       .select('*')
       .eq('active', true)
       .order('created_at', { ascending: false });
-
-    if (req.query.category) {
-      query = query.eq('category', req.query.category);
-    }
-
-    const { data, error } = await query;
 
     if (error) throw error;
 
