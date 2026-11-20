@@ -18,6 +18,7 @@ import { ShopPage } from './pages/Shop';
 import { CheckoutPage } from './pages/Checkout';
 import { OrderSuccessPage } from './pages/OrderSuccess';
 import { OrdersPage } from './pages/Orders';
+import { AdminPage } from './pages/Admin';
 import { fetchProducts, type Product } from './data/products';
 
 const SteelRack = React.lazy(() =>
@@ -185,6 +186,7 @@ export default function App() {
           <Route path="/checkout" element={<CheckoutLayout />} />
           <Route path="/order/success" element={<OrderSuccessLayout />} />
           <Route path="/orders" element={<OrdersLayout />} />
+          <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </BrowserRouter>
     </CartProvider>
