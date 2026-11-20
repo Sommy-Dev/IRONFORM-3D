@@ -17,6 +17,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { ShopPage } from './pages/Shop';
 import { CheckoutPage } from './pages/Checkout';
 import { OrderSuccessPage } from './pages/OrderSuccess';
+import { OrdersPage } from './pages/Orders';
 import { fetchProducts, type Product } from './data/products';
 
 const SteelRack = React.lazy(() =>
@@ -161,6 +162,18 @@ function OrderSuccessLayout() {
   );
 }
 
+function OrdersLayout() {
+  return (
+    <>
+      <StoreNavbar />
+      <main className="flex-1">
+        <OrdersPage />
+      </main>
+      <StoreFooter />
+    </>
+  );
+}
+
 export default function App() {
   return (
     <CartProvider>
@@ -171,6 +184,7 @@ export default function App() {
           <Route path="/shop" element={<ShopLayout />} />
           <Route path="/checkout" element={<CheckoutLayout />} />
           <Route path="/order/success" element={<OrderSuccessLayout />} />
+          <Route path="/orders" element={<OrdersLayout />} />
         </Routes>
       </BrowserRouter>
     </CartProvider>

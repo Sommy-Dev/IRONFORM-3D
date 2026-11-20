@@ -57,6 +57,29 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
+app.get('/api/orders', async (req, res) => {
+  try {
+    const email = req.query.email;
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const { data, error } = await supabase
+      .from('orders')
+      .select(
+        'id, customer_email, delivery_address, total_ngn, status, paystack_reference, created_at, order_items(name, quantity, unit_price_ngn)',
+      )
+      .eq('customer_email', email)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    res.json({ orders: data || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ---- Checkout validation schema ----
 const checkoutSchema = z.object({
   customer: z.object({

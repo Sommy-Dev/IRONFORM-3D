@@ -6,6 +6,7 @@ import { useCart } from '../context/CartContext';
 const navLinks = [
   { to: '/', label: 'Home' },
   { to: '/shop', label: 'Shop' },
+  { to: '/orders', label: 'Orders' },
 ];
 
 export const StoreNavbar: React.FC = () => {
