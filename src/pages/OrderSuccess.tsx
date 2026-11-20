@@ -16,7 +16,7 @@ export const OrderSuccessPage: React.FC = () => {
   const [status, setStatus] = useState<'success' | 'failed' | null>(null);
 
   useEffect(() => {
-    const ref = searchParams.get('reference') || null;
+    const ref = searchParams.get('reference') || searchParams.get('trxref') || null;
     setReference(ref);
   }, [searchParams]);
 
@@ -95,7 +95,7 @@ export const OrderSuccessPage: React.FC = () => {
           <div className="text-center mb-10">
             <CheckCircle className="w-12 h-12 mx-auto mb-4 text-[#A3E635]" />
             <h2 className="text-3xl font-bold text-white mb-2">
-              Payment successful
+              Payment confirmed
             </h2>
             <p className="text-slate-400">
               Your order has been confirmed. Thank you for shopping with
@@ -114,19 +114,19 @@ export const OrderSuccessPage: React.FC = () => {
             <div className="space-y-4 mb-6">
               {order.order_items?.map((item: any) => (
                 <div
-                  key={item.product_id}
+                  key={item.id}
                   className="flex justify-between items-center border-b border-[#1F2937] pb-3"
                 >
                   <div>
                     <h4 className="font-semibold text-white text-sm">
-                      {item.product?.name || item.product_id}
+                      {item.name}
                     </h4>
                     <p className="text-xs text-slate-400">
                       {item.quantity}x
                     </p>
                   </div>
                   <span className="font-semibold text-white">
-                    {formatNaira(((item.unit_price || item.product?.price_ngn || 0) * item.quantity))}
+                    {formatNaira(item.unit_price_ngn * item.quantity)}
                   </span>
                 </div>
               ))}
@@ -134,7 +134,7 @@ export const OrderSuccessPage: React.FC = () => {
 
             <div className="flex justify-between text-lg font-bold text-white">
               <span>Total</span>
-              <span>{formatNaira(order.total)}</span>
+                  <span>{formatNaira(order.total_ngn)}</span>
             </div>
           </div>
 
