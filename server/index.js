@@ -132,12 +132,16 @@ app.post('/api/checkout', async (req, res) => {
     if (orderError) throw orderError;
 
     // Insert order items
-    const orderItems = items.map((item) => ({
-      order_id: order.id,
-      product_id: item.productId,
-      quantity: item.quantity,
-      unit_price_ngn: productMap.get(item.productId).price_ngn,
-    }));
+    const orderItems = items.map((item) => {
+      const product = productMap.get(item.productId);
+      return {
+        order_id: order.id,
+        product_id: item.productId,
+        name: product.name,
+        unit_price_ngn: product.price_ngn,
+        quantity: item.quantity,
+      };
+    });
 
     const { error: itemsError } = await supabase
       .from('order_items')
