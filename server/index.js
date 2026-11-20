@@ -112,7 +112,7 @@ app.post('/api/checkout', async (req, res) => {
     // Compute total server-side
     const total = items.reduce((sum, item) => {
       const product = productMap.get(item.productId);
-      return sum + product.price * item.quantity;
+      return sum + product.price_ngn * item.quantity;
     }, 0);
 
     // Insert order (status pending)
@@ -122,8 +122,8 @@ app.post('/api/checkout', async (req, res) => {
         customer_name: customer.name,
         customer_email: customer.email,
         customer_phone: customer.phone,
-        customer_address: customer.address,
-        total,
+        delivery_address: customer.address,
+        total_ngn: total,
         status: 'pending',
       })
       .select()
@@ -136,7 +136,7 @@ app.post('/api/checkout', async (req, res) => {
       order_id: order.id,
       product_id: item.productId,
       quantity: item.quantity,
-      unit_price: productMap.get(item.productId).price,
+      unit_price_ngn: productMap.get(item.productId).price_ngn,
     }));
 
     const { error: itemsError } = await supabase
@@ -217,7 +217,7 @@ app.get('/api/orders/verify/:reference', async (req, res) => {
 
     if (orderError) throw orderError;
 
-    const amountMatches = transaction.amount === order.total * 100;
+    const amountMatches = transaction.amount === order.total_ngn * 100;
 
     if (transaction.status === 'success' && amountMatches) {
       // Mark order paid
